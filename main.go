@@ -64,22 +64,22 @@ func main() {
 
 	pollingRate, err := time.ParseDuration(cfg.PollingRate)
 	if err != nil {
-		fatal(err)
+		fatal("failed to parse PollingRate:", err)
 	}
 
 	timeout, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
-		fatal(err)
+		fatal("failed to parse Timeout:", err)
 	}
 
 	dg, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
-		fatal(err)
+		fatal("failed to create session:", err)
 	}
 
 	err = dg.Open()
 	if err != nil {
-		fatal(err)
+		fatal("failed to connect to Discord:", err)
 	}
 	defer dg.Close()
 
