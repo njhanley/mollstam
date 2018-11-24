@@ -15,14 +15,18 @@ func updateChannel(dg *discordgo.Session, cfg *config, status, topic string) {
 	if cfg.ChannelID == "" {
 		return
 	}
-	channel := new(channelEdit)
+	channel := new(discordgo.ChannelEdit)
 	if cfg.ChannelName != "" {
 		channel.Name = cfg.ChannelName + "［" + status + "］"
 	}
 	if cfg.ChannelUpdateTopic {
-		channel.Topic = topic
+		if topic == "" {
+			channel.Topic = "\n" // workaround to clear channel topic
+		} else {
+			channel.Topic = topic
+		}
 	}
-	if _, err := channelEditComplex(dg, cfg.ChannelID, channel); err != nil {
+	if _, err := dg.ChannelEditComplex(cfg.ChannelID, channel); err != nil {
 		log.Println("failed to update channel:", err)
 	} else {
 		log.Println("updated channel")
