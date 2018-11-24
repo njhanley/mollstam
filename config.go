@@ -11,11 +11,12 @@ type config struct {
 	PollingRate string `json:"polling_rate"` // duration between pings (default: "30s")
 	Timeout     string `json:"timeout"`      // duration to wait when connecting to the server (default: "5s")
 
-	DiscordToken  string `json:"discord_token"`  // bot token (required)
-	ChannelID     string `json:"channel_id"`     // ID of channel to update (omit to disable updating channel)
-	ChannelName   string `json:"channel_name"`   // name used when updating channel (omit to disable updating channel name)
-	NotifyUserID  string `json:"notify_user_id"` // ID of user to notify when server is unreachable (omit to disable notifying user)
-	NotifyMessage string `json:"notify_message"` // message sent to user when server is unreachable (default: "The server appears to be offline.")
+	DiscordToken       string `json:"discord_token"`        // bot token (required)
+	ChannelID          string `json:"channel_id"`           // ID of channel to update (omit to disable updating channel)
+	ChannelName        string `json:"channel_name"`         // name used when updating channel (omit to disable updating channel name)
+	ChannelUpdateTopic bool   `json:"channel_update_topic"` // update channel topic with player list (default: false)
+	NotifyUserID       string `json:"notify_user_id"`       // ID of user to notify when server is unreachable (omit to disable notifying user)
+	NotifyMessage      string `json:"notify_message"`       // message sent to user when server is unreachable (default: "The server appears to be offline.")
 }
 
 func readConfig(filename string) (*config, error) {

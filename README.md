@@ -17,6 +17,7 @@ Mollstam reads `config.json` in the current directory by default. The config fil
     "timeout": "5s",
     "channel_id": "",
     "channel_name": "minecraft",
+    "channel_update_topic": false,
     "discord_token": "",
     "notify_user_id": "",
     "notify_message": "The server appears to be offline."
