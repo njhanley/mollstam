@@ -67,7 +67,7 @@ func main() {
 		fatal(err)
 	}
 
-	timeout, err := time.ParseDuration(cfg.PollingRate)
+	timeout, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		fatal(err)
 	}
