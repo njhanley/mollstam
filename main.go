@@ -36,20 +36,23 @@ func updateChannel(dg *discordgo.Session, cfg *config, status, topic string) {
 func updateDiscord(dg *discordgo.Session, cfg *config, status *mcStatus) {
 	if status == nil {
 		updateChannel(dg, cfg, "offline", "")
-		if cfg.NotifyUserID == "" {
-			return
-		}
-		if _, err := dg.ChannelMessageSend(cfg.ChannelID, "<@!"+cfg.NotifyUserID+"> "+cfg.NotifyMessage); err != nil {
-			log.Println("failed to notify user:", err)
-		} else {
-			log.Println("notified user")
-		}
 	} else {
 		players := make([]string, len(status.Players.Sample))
 		for i, player := range status.Players.Sample {
 			players[i] = player.Name
 		}
 		updateChannel(dg, cfg, strconv.Itoa(status.Players.Online), strings.Join(players, ", "))
+	}
+}
+
+func notifyUser(dg *discordgo.Session, cfg *config) {
+	if cfg.NotifyUserID == "" {
+		return
+	}
+	if _, err := dg.ChannelMessageSend(cfg.ChannelID, "<@!"+cfg.NotifyUserID+"> "+cfg.NotifyMessage); err != nil {
+		log.Println("failed to notify user:", err)
+	} else {
+		log.Println("notified user")
 	}
 }
 
@@ -85,6 +88,7 @@ func main() {
 
 	go func() {
 		var prevStatus *mcStatus
+		var failedPings int
 		for range time.Tick(pollingRate) {
 			status, err := queryMinecraft(cfg.Address, timeout)
 			if prevStatus != nil && err != nil {
@@ -92,6 +96,14 @@ func main() {
 			}
 			if status == nil && prevStatus != nil || status != nil && (prevStatus == nil || status.Players.Online != prevStatus.Players.Online) {
 				updateDiscord(dg, cfg, status)
+			}
+			if status == nil {
+				failedPings++
+				if failedPings == cfg.NotifyFailedPings {
+					notifyUser(dg, cfg)
+				}
+			} else {
+				failedPings = 0
 			}
 			prevStatus = status
 		}
