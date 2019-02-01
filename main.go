@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,9 @@ func updateDiscord(dg *discordgo.Session, cfg *config, status *mcStatus) {
 		for i, player := range status.Players.Sample {
 			players[i] = player.Name
 		}
+		sort.Slice(players, func(i, j int) bool {
+			return players[i] < players[j]
+		})
 		updateChannel(dg, cfg, strconv.Itoa(status.Players.Online), strings.Join(players, ", "))
 	}
 }
