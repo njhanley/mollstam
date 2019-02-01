@@ -16,7 +16,7 @@ type config struct {
 	ChannelName        string `json:"channel_name"`         // name used when updating channel (omit to disable updating channel name)
 	ChannelUpdateTopic bool   `json:"channel_update_topic"` // update channel topic with player list (default: false)
 	NotifyUserID       string `json:"notify_user_id"`       // ID of user to notify when server is unreachable (omit to disable notifying user)
-	NotifyFailedPings  int    `json:"notify_failed_pings"`  // failed pings before user is notified (default: 3)
+	NotifyFailedPings  int    `json:"notify_failed_pings"`  // failed pings before user is notified (default: 5)
 	NotifyMessage      string `json:"notify_message"`       // message sent to user when server is unreachable (default: "The server appears to be offline.")
 }
 
@@ -29,7 +29,7 @@ func readConfig(filename string) (*config, error) {
 		Address:           "127.0.0.1:25565",
 		PollingRate:       "30s",
 		Timeout:           "5s",
-		NotifyFailedPings: 3,
+		NotifyFailedPings: 5,
 		NotifyMessage:     "The server appears to be offline.",
 	}
 	if err := json.Unmarshal(data, cfg); err != nil {

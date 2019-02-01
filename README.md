@@ -20,7 +20,7 @@ Mollstam reads `config.json` in the current directory by default. The config fil
     "channel_update_topic": false,
     "discord_token": "",
     "notify_user_id": "",
-    "notify_failed_pings": 3,
+    "notify_failed_pings": 5,
     "notify_message": "The server appears to be offline."
 }
 ```
