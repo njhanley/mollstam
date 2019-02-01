@@ -45,6 +45,9 @@ func updateDiscord(dg *discordgo.Session, cfg *config, status *mcStatus) {
 		sort.Slice(players, func(i, j int) bool {
 			return players[i] < players[j]
 		})
+		if len(players) < status.Players.Online {
+			players = append(players, "...")
+		}
 		updateChannel(dg, cfg, strconv.Itoa(status.Players.Online), strings.Join(players, ", "))
 	}
 }
