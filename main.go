@@ -30,7 +30,7 @@ func updateChannel(dg *discordgo.Session, cfg *config, status, topic string) {
 	if _, err := dg.ChannelEditComplex(cfg.ChannelID, channel); err != nil {
 		log.Println("failed to update channel:", err)
 	} else {
-		log.Println("updated channel")
+		log.Printf("updated channel: %s players online\n", status)
 	}
 }
 
@@ -59,7 +59,7 @@ func notifyUser(dg *discordgo.Session, cfg *config) {
 	if _, err := dg.ChannelMessageSend(cfg.ChannelID, "<@!"+cfg.NotifyUserID+"> "+cfg.NotifyMessage); err != nil {
 		log.Println("failed to notify user:", err)
 	} else {
-		log.Println("notified user")
+		log.Printf("notified user: %s\n", cfg.NotifyMessage)
 	}
 }
 
