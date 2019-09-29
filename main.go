@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,6 +66,11 @@ func notifyUser(dg *discordgo.Session, cfg *config) {
 	}
 }
 
+func fatal(v ...interface{}) {
+	fmt.Fprintln(os.Stderr, v...)
+	os.Exit(1)
+}
+
 func main() {
 	configFilename := flag.String("c", "config.json", "config file location")
 	flag.Parse()
@@ -116,5 +124,7 @@ func main() {
 		}
 	}()
 
-	await(unix.SIGINT, unix.SIGTERM)
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, unix.SIGINT, unix.SIGTERM)
+	<-sc
 }
