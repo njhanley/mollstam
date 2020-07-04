@@ -106,7 +106,7 @@ func main() {
 		var failedPings int
 		for range time.Tick(pollingRate) {
 			status, err := queryMinecraft(cfg.Address, timeout)
-			if prevStatus != nil && err != nil {
+			if err != nil {
 				log.Println("failed to query server:", err)
 			}
 			if status == nil && prevStatus != nil || status != nil && (prevStatus == nil || status.Players.Online != prevStatus.Players.Online) {
