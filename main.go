@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"golang.org/x/sys/unix"
 )
 
 func updateChannel(dg *discordgo.Session, cfg *config, status, topic string) {
@@ -125,6 +124,6 @@ func main() {
 	}()
 
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, unix.SIGINT, unix.SIGTERM)
+	signal.Notify(sc, os.Interrupt)
 	<-sc
 }
