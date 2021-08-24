@@ -11,7 +11,7 @@ import (
 	"github.com/njhanley/mcproto"
 )
 
-func handshakePacket(version int32, host string, port uint16, nextState int32) (p mcproto.Packet, err error) {
+func handshakePacket(host string, port uint16) (p mcproto.Packet, err error) {
 	var (
 		n, m int
 		data = make([]byte, (5+5)+5+(5+255)+2+5)
@@ -82,7 +82,7 @@ func queryMinecraft(addr string, timeout time.Duration) (*mcStatus, error) {
 	}
 
 	// handshake
-	p, err := handshakePacket(-1, host, port, 1)
+	p, err := handshakePacket(host, port)
 	if err != nil {
 		return nil, err
 	}
