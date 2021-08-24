@@ -103,7 +103,7 @@ func main() {
 	go func() {
 		var prevStatus *mcStatus
 		var failedPings int
-		for range time.Tick(pollingRate) {
+		for c := time.Tick(pollingRate); ; <-c {
 			status, err := queryMinecraft(cfg.Address, timeout)
 			if err != nil {
 				log.Println("failed to query server:", err)
