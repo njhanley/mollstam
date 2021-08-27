@@ -1,41 +1,121 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
+	"strings"
 	"time"
-
-	"github.com/njhanley/mcproto"
 )
 
-func handshakePacket(host string, port uint16) (p mcproto.Packet, err error) {
-	var (
-		n, m int
-		data = make([]byte, (5+5)+5+(5+255)+2+5)
-	)
+const (
+	bits = 7
+	msb  = 1 << bits
+)
 
-	m, err = mcproto.PutVarInt(data[n:], -1)
-	if n += m; err != nil {
-		return p, err
+var (
+	errUnexpectedPacket = errors.New("unexpected packet")
+	errLengthMismatch   = errors.New("length mismatch")
+)
+
+type reader interface {
+	io.Reader
+	io.ByteReader
+}
+
+type writer interface {
+	io.Writer
+	io.ByteWriter
+}
+
+func readVarInt(r io.ByteReader) (x int32, err error) {
+	var ux uint32
+	for i := 0; ; i += bits {
+		b, err := r.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		ux |= uint32(b&^msb) << i
+		if b&msb == 0 {
+			return int32(ux), nil
+		}
 	}
+}
 
-	m, err = mcproto.PutString(data[n:], host)
-	if n += m; err != nil {
-		return p, err
+func writeVarInt(w io.ByteWriter, x int32) error {
+	for ux := uint32(x); ; ux >>= bits {
+		b := byte(ux) &^ msb
+		if uint32(b) < ux {
+			b |= msb
+		}
+		err := w.WriteByte(b)
+		if err != nil {
+			return err
+		}
+		if b&msb == 0 {
+			return nil
+		}
 	}
+}
 
-	binary.BigEndian.PutUint16(data[n:], port)
-	n += 2
-
-	m, err = mcproto.PutVarInt(data[n:], 1)
-	if n += m; err != nil {
-		return p, err
+func readString(r reader) (s string, err error) {
+	n, err := readVarInt(r)
+	if err != nil {
+		return "", err
 	}
+	buf := new(strings.Builder)
+	_, err = io.CopyN(buf, r, int64(n))
+	return buf.String(), err
+}
 
-	return mcproto.Packet{ID: 0x00, Data: data[:n]}, nil
+func writeString(w writer, s string) error {
+	err := writeVarInt(w, int32(len(s)))
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(w, s)
+	return err
+}
+
+func readPacket(r reader) (id int32, data []byte, err error) {
+	n, err := readVarInt(r)
+	if err != nil {
+		return 0, nil, err
+	}
+	buf := new(bytes.Buffer)
+	_, err = io.CopyN(buf, r, int64(n))
+	if err != nil {
+		return 0, nil, err
+	}
+	id, err = readVarInt(buf)
+	if err != nil {
+		return 0, nil, err
+	}
+	return id, buf.Bytes(), err
+}
+
+func writePacket(w writer, id int32, data []byte) error {
+	buf := new(bytes.Buffer)
+	err := writeVarInt(buf, id)
+	if err != nil {
+		return err
+	}
+	err = writeVarInt(w, int32(buf.Len()+len(data)))
+	if err != nil {
+		return err
+	}
+	_, err = buf.WriteTo(w)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(data)
+	return err
 }
 
 type mcStatus struct {
@@ -57,74 +137,73 @@ type mcStatus struct {
 	Favicon []byte `json:"favicon"`
 }
 
+func splitAddress(addr string) (host string, port uint16, err error) {
+	host, _port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", 0, err
+	}
+	u, err := strconv.ParseUint(_port, 10, 16)
+	return host, uint16(u), err
+}
+
 func queryMinecraft(addr string, timeout time.Duration) (*mcStatus, error) {
+	host, port, err := splitAddress(addr)
+	if err != nil {
+		return nil, err
+	}
+
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
-	var (
-		host string
-		port uint16
-		n    int
-		buf  = make([]byte, (5+5)+(5+32767))
-	)
-
-	if _host, _port, err := net.SplitHostPort(addr); err != nil {
-		return nil, err
-	} else {
-		p, err := strconv.ParseUint(_port, 10, 16)
-		if err != nil {
-			return nil, err
-		}
-		host, port = _host, uint16(p)
-	}
+	r := bufio.NewReader(conn)
+	w := bufio.NewWriter(conn)
+	buf := new(bytes.Buffer)
 
 	// handshake
-	p, err := handshakePacket(host, port)
+	writeVarInt(buf, -1) // protocol version
+	writeString(buf, host)
+	binary.Write(buf, binary.BigEndian, port)
+	writeVarInt(buf, 1) // next state
+	err = writePacket(w, 0, buf.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	n, err = mcproto.PutPacket(buf, p)
+	err = w.Flush()
 	if err != nil {
 		return nil, err
 	}
-	_, err = conn.Write(buf[:n])
-	if err != nil {
-		return nil, err
-	}
+	buf.Reset()
 
 	// request
-	n, err = mcproto.PutPacket(buf, mcproto.Packet{})
+	err = writePacket(w, 0, buf.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	_, err = conn.Write(buf[:n])
+	err = w.Flush()
 	if err != nil {
 		return nil, err
 	}
+	buf.Reset()
 
 	// response
-	n, err = conn.Read(buf)
+	id, data, err := readPacket(r)
 	if err != nil {
 		return nil, err
 	}
-	p, n, err = mcproto.GetPacket(buf[:n])
+	if id != 0 {
+		return nil, fmt.Errorf("%w: id=%d, expected=%d", errUnexpectedPacket, id, 0)
+	}
+	buf = bytes.NewBuffer(data)
+	s, err := readString(buf)
 	if err != nil {
 		return nil, err
-	}
-	if p.ID != 0x00 {
-		return nil, fmt.Errorf("unexpected packet id %#x", p.ID)
 	}
 
-	// decode status
-	jsonResponse, n, err := mcproto.GetString(p.Data)
-	if err != nil {
-		return nil, err
-	}
 	status := new(mcStatus)
-	err = json.Unmarshal([]byte(jsonResponse), status)
+	err = json.Unmarshal([]byte(s), status)
 	if err != nil {
 		return nil, err
 	}
