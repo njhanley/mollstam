@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -118,25 +119,6 @@ func writePacket(w writer, id int32, data []byte) error {
 	return err
 }
 
-type mcStatus struct {
-	Version struct {
-		Name     string `json:"name"`
-		Protocol int    `json:"protocol"`
-	} `json:"version"`
-	Players struct {
-		Max    int `json:"max"`
-		Online int `json:"online"`
-		Sample []struct {
-			Name string `json:"name"`
-			ID   string `json:"id"`
-		} `json:"sample"`
-	} `json:"players"`
-	Description struct {
-		Text string `json:"text"`
-	} `json:"description"`
-	Favicon []byte `json:"favicon"`
-}
-
 func splitAddress(addr string) (host string, port uint16, err error) {
 	host, _port, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -146,15 +128,15 @@ func splitAddress(addr string) (host string, port uint16, err error) {
 	return host, uint16(u), err
 }
 
-func queryMinecraft(addr string, timeout time.Duration) (*mcStatus, error) {
+func queryMinecraft(addr string, timeout time.Duration) (online int, players []string, err error) {
 	host, port, err := splitAddress(addr)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer conn.Close()
 
@@ -169,44 +151,57 @@ func queryMinecraft(addr string, timeout time.Duration) (*mcStatus, error) {
 	writeVarInt(buf, 1) // next state
 	err = writePacket(w, 0, buf.Bytes())
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	err = w.Flush()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	buf.Reset()
 
 	// request
 	err = writePacket(w, 0, buf.Bytes())
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	err = w.Flush()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	buf.Reset()
 
 	// response
 	id, data, err := readPacket(r)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	if id != 0 {
-		return nil, fmt.Errorf("%w: id=%d, expected=%d", errUnexpectedPacket, id, 0)
+		return 0, nil, fmt.Errorf("%w: id=%d, expected=%d", errUnexpectedPacket, id, 0)
 	}
 	buf = bytes.NewBuffer(data)
 	s, err := readString(buf)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
-	status := new(mcStatus)
-	err = json.Unmarshal([]byte(s), status)
+	var status struct {
+		Players struct {
+			Online int `json:"online"`
+			Sample []struct {
+				Name string `json:"name"`
+			} `json:"sample"`
+		} `json:"players"`
+	}
+	err = json.Unmarshal([]byte(s), &status)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
-	return status, nil
+	players = make([]string, len(status.Players.Sample))
+	for i := range status.Players.Sample {
+		players[i] = status.Players.Sample[i].Name
+	}
+	sort.Strings(players)
+
+	return status.Players.Online, players, nil
 }

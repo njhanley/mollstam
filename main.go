@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sort"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -33,24 +33,6 @@ func updateChannel(dg *discordgo.Session, cfg *config, status, topic string) {
 		log.Println("failed to update channel:", err)
 	} else {
 		log.Printf("updated channel: %s players online\n", status)
-	}
-}
-
-func updateDiscord(dg *discordgo.Session, cfg *config, status *mcStatus) {
-	if status == nil {
-		updateChannel(dg, cfg, "offline", "")
-	} else {
-		players := make([]string, len(status.Players.Sample))
-		for i, player := range status.Players.Sample {
-			players[i] = player.Name
-		}
-		sort.Slice(players, func(i, j int) bool {
-			return players[i] < players[j]
-		})
-		if len(players) < status.Players.Online {
-			players = append(players, "...")
-		}
-		updateChannel(dg, cfg, strconv.Itoa(status.Players.Online), strings.Join(players, ", "))
 	}
 }
 
@@ -101,25 +83,32 @@ func main() {
 	defer dg.Close()
 
 	go func() {
-		var prevStatus *mcStatus
-		var failedPings int
+		var (
+			failedPings int
+			online      int
+			players     []string
+		)
 		for c := time.Tick(pollingRate); ; <-c {
-			status, err := queryMinecraft(cfg.Address, timeout)
+			_online, _players, err := queryMinecraft(cfg.Address, timeout)
 			if err != nil {
-				log.Println("failed to query server:", err)
-			}
-			if status == nil && prevStatus != nil || status != nil && (prevStatus == nil || status.Players.Online != prevStatus.Players.Online) {
-				updateDiscord(dg, cfg, status)
-			}
-			if status == nil {
 				failedPings++
-				if failedPings == cfg.NotifyFailedPings {
-					notifyUser(dg, cfg)
-				}
+				log.Println("failed to query server:", err)
 			} else {
 				failedPings = 0
 			}
-			prevStatus = status
+			if failedPings == cfg.NotifyFailedPings {
+				updateChannel(dg, cfg, "offline", "")
+				notifyUser(dg, cfg)
+				continue
+			}
+			if _online != online || reflect.DeepEqual(_players, players) {
+				online, players = _online, _players
+				topic := strings.Join(players, ", ")
+				if online > len(players) {
+					topic += ", ..."
+				}
+				updateChannel(dg, cfg, strconv.Itoa(online), topic)
+			}
 		}
 	}()
 
