@@ -104,7 +104,7 @@ func main() {
 			if _online != online || reflect.DeepEqual(_players, players) {
 				online, players = _online, _players
 				topic := strings.Join(players, ", ")
-				if online > len(players) {
+				if 0 < len(players) && len(players) < online {
 					topic += ", ..."
 				}
 				updateChannel(dg, cfg, strconv.Itoa(online), topic)
