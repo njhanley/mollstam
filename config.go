@@ -36,10 +36,10 @@ func readConfig(filename string) (*config, error) {
 		return nil, err
 	}
 	if cfg.DiscordToken == "" {
-		return nil, errors.New(`"DiscordToken" is required`)
+		return nil, errors.New(`"discord_token" is required`)
 	}
 	if cfg.ChannelID == "" {
-		return nil, errors.New(`"ChannelID" is required`)
+		return nil, errors.New(`"channel_id" is required`)
 	}
 	return cfg, nil
 }
