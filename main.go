@@ -15,9 +15,6 @@ import (
 )
 
 func updateChannel(dg *discordgo.Session, cfg *config, status, topic string) {
-	if cfg.ChannelID == "" {
-		return
-	}
 	channel := new(discordgo.ChannelEdit)
 	if cfg.ChannelName != "" {
 		channel.Name = cfg.ChannelName + "［" + status + "］"
