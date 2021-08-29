@@ -56,6 +56,8 @@ func main() {
 	cfg, err := readConfig(*configFilename)
 	if err != nil {
 		fatal("failed to read config:", err)
+	} else {
+		log.Println("read config")
 	}
 
 	pollingRate, err := time.ParseDuration(cfg.PollingRate)
@@ -79,6 +81,8 @@ func main() {
 	err = dg.Open()
 	if err != nil {
 		fatal("failed to connect to Discord:", err)
+	} else {
+		log.Println("connected to Discord")
 	}
 	defer dg.Close()
 
@@ -99,6 +103,7 @@ func main() {
 				}
 				continue
 			} else {
+				log.Printf("queried server: %d online\n", _online)
 				failedPings = 0
 			}
 			if _online != online || reflect.DeepEqual(_players, players) {
