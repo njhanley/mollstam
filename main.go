@@ -62,6 +62,9 @@ func main() {
 	if err != nil {
 		fatal("failed to parse PollingRate:", err)
 	}
+	if pollingRate < 5 * time.Minute {
+		log.Println("polling rate is less than 5 minutes; this may cause rate limit issues with Discord")
+	}
 
 	timeout, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {

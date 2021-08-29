@@ -8,7 +8,7 @@ import (
 
 type config struct {
 	Address     string `json:"address"`      // server address and port (default: "127.0.0.1:25565")
-	PollingRate string `json:"polling_rate"` // duration between pings (default: "30s")
+	PollingRate string `json:"polling_rate"` // duration between pings (default: "5m")
 	Timeout     string `json:"timeout"`      // duration to wait when connecting to the server (default: "5s")
 
 	DiscordToken       string `json:"discord_token"`        // bot token (required)
@@ -27,7 +27,7 @@ func readConfig(filename string) (*config, error) {
 	}
 	cfg := &config{
 		Address:           "127.0.0.1:25565",
-		PollingRate:       "30s",
+		PollingRate:       "5m",
 		Timeout:           "5s",
 		NotifyFailedPings: 5,
 		NotifyMessage:     "The server appears to be offline.",
