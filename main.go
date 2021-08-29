@@ -62,7 +62,7 @@ func main() {
 	if err != nil {
 		fatal("failed to parse PollingRate:", err)
 	}
-	if pollingRate < 5 * time.Minute {
+	if pollingRate < 5*time.Minute {
 		log.Println("polling rate is less than 5 minutes; this may cause rate limit issues with Discord")
 	}
 
@@ -91,15 +91,15 @@ func main() {
 		for c := time.Tick(pollingRate); ; <-c {
 			_online, _players, err := queryMinecraft(cfg.Address, timeout)
 			if err != nil {
-				failedPings++
 				log.Println("failed to query server:", err)
+				failedPings++
+				if failedPings == cfg.NotifyFailedPings {
+					updateChannel(dg, cfg, "offline", "")
+					notifyUser(dg, cfg)
+				}
+				continue
 			} else {
 				failedPings = 0
-			}
-			if failedPings == cfg.NotifyFailedPings {
-				updateChannel(dg, cfg, "offline", "")
-				notifyUser(dg, cfg)
-				continue
 			}
 			if _online != online || reflect.DeepEqual(_players, players) {
 				online, players = _online, _players
