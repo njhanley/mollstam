@@ -85,7 +85,7 @@ func main() {
 	go func() {
 		var (
 			failedPings int
-			online      int
+			online      int = -1
 			players     []string
 		)
 		for c := time.Tick(pollingRate); ; <-c {
