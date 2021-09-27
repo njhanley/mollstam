@@ -1,9 +1,10 @@
 module github.com/njhanley/mollstam
 
-go 1.13
+go 1.17
+
+require github.com/bwmarrin/discordgo v0.23.2
 
 require (
-	github.com/bwmarrin/discordgo v0.20.2
-	github.com/njhanley/mcproto v0.0.0-20191228235338-4a45a2f12967
-	golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8
+	github.com/gorilla/websocket v1.4.0 // indirect
+	golang.org/x/crypto v0.0.0-20181030102418-4d3f4d9ffa16 // indirect
 )
